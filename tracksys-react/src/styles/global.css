@@ -123,6 +123,26 @@
   .live-chip{position:absolute;left:14px;top:14px;background:rgba(34,18,56,.9);color:#fff;padding:8px 13px;border-radius:20px;font-size:11.5px;font-weight:600;display:flex;align-items:center;gap:8px;font-family:'IBM Plex Mono';letter-spacing:.03em}
   .live-chip i{width:7px;height:7px;border-radius:50%;background:#4ADE80;animation:blink 1.4s infinite}
   @keyframes blink{50%{opacity:.25}}
+
+  /* Marqueurs MapLibre (véhicules, réclamations, arrêts, suivi) */
+  .map-truck-marker{position:relative;width:0;height:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .map-truck-dot{width:17px;height:17px;border-radius:50%;background:#fff;border:4px solid var(--cyan);box-shadow:0 1px 4px rgba(20,25,40,.25);display:block}
+  .map-truck-halo{position:absolute;width:32px;height:32px;border-radius:50%;background:rgba(34,178,206,.14);animation:truckPulse 2.2s ease-in-out infinite}
+  @keyframes truckPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.15);opacity:.6}}
+  .map-truck-label{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:11px;color:var(--ink);background:rgba(255,255,255,.92);padding:1px 6px;border-radius:6px;white-space:nowrap;box-shadow:0 1px 3px rgba(20,25,40,.15)}
+
+  .map-pin-marker{position:relative;width:0;height:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .map-pin-dot{width:14px;height:14px;border-radius:50%;background:var(--orange);border:2.5px solid #fff;box-shadow:0 1px 4px rgba(20,25,40,.25);display:block}
+  .map-pin-dot.pulse{animation:pinPulse 1.8s ease-in-out infinite}
+  @keyframes pinPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.35)}}
+  .map-pin-halo{position:absolute;width:26px;height:26px;border-radius:50%;background:rgba(239,138,30,.18)}
+
+  .map-stop-marker{width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid var(--stop-color,var(--navy));display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:9.5px;color:var(--stop-color,var(--navy));box-shadow:0 1px 3px rgba(20,25,40,.2)}
+
+  .map-follow-ring{width:44px;height:44px;border-radius:50%;border:3px solid var(--cyan);opacity:0;transition:opacity .2s;animation:ringPulse 1.6s ease-in-out infinite;pointer-events:none}
+  @keyframes ringPulse{0%,100%{transform:scale(0.9)}50%{transform:scale(1.15)}}
+
+  .maplibregl-ctrl-attrib{font-size:10px}
   .detail{padding:16px}
   .detail-empty{padding:40px 20px;text-align:center;color:var(--faint);font-size:13px}
   .detail-empty svg{width:40px;height:40px;margin-bottom:12px;opacity:.4}

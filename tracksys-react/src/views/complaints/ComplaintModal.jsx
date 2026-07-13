@@ -131,7 +131,7 @@ export default function ComplaintModal() {
 
         <div className="mlabel">Localisation</div>
         <div className="rc-map">
-          <MiniMap x={c.x} y={c.y} />
+          <MiniMap lng={c.lng} lat={c.lat} />
         </div>
 
         <div className="mlabel">Suivi du statut</div>

@@ -40,6 +40,3 @@ export function parseHM(t) {
   const [a, b] = t.split(':').map(Number);
   return a * 60 + b;
 }
-
-/** Points d'une polyligne au format attribut SVG `points` */
-export const toPoints = (route) => route.map((p) => p.join(',')).join(' ');

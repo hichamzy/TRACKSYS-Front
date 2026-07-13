@@ -1,20 +1,20 @@
-// Réclamations citoyennes — x/y = position sur la carte SVG (1000x720)
+// Réclamations citoyennes — lng/lat = position réelle (Casablanca)
 export const INITIAL_COMPLAINTS = [
-  { id: 'RC-2087', type: 'Dépôt sauvage', zone: 'Bd Anfa, Maârif', prio: 'Haute', status: 'En cours', assign: 'BN-04', time: '2 min', date: "Aujourd'hui 09:14", x: 720, y: 300 },
-  { id: 'RC-2084', type: 'Bac endommagé', zone: 'Rue Ahfir, Anfa', prio: 'Moyenne', status: 'En cours', assign: 'BN-02', time: '26 min', date: "Aujourd'hui 08:50", x: 300, y: 180 },
-  { id: 'RC-2081', type: 'Collecte manquée', zone: 'Rue de la Corniche, Aïn Diab', prio: 'Moyenne', status: 'Reçue', assign: null, time: '34 min', date: "Aujourd'hui 08:42", x: 300, y: 560 },
-  { id: 'RC-2088', type: 'Éclairage public', zone: 'Bd Rachidi, Sidi Belyout', prio: 'Basse', status: 'Reçue', assign: null, time: '8 min', date: "Aujourd'hui 09:08", x: 600, y: 200 },
-  { id: 'RC-2079', type: 'Dépôt sauvage', zone: 'Corniche Ouest', prio: 'Haute', status: 'Résolue', assign: 'BN-09', time: '18 min', date: "Aujourd'hui 07:20", x: 520, y: 600 },
-  { id: 'RC-2076', type: 'Voirie (nid-de-poule)', zone: 'Bd Oued Sebou, Hay Hassani', prio: 'Basse', status: 'En cours', assign: 'BN-11', time: '1 h', date: "Aujourd'hui 08:05", x: 840, y: 440 },
-  { id: 'RC-2072', type: 'Dépôt sauvage', zone: 'Rue Jenner, Maârif Sud', prio: 'Moyenne', status: 'Résolue', assign: 'BN-07', time: '2 h', date: "Aujourd'hui 07:02", x: 640, y: 360 },
-  { id: 'RC-2091', type: 'Collecte manquée', zone: 'Rue Normandie', prio: 'Moyenne', status: 'Reçue', assign: null, time: '5 min', date: "Aujourd'hui 09:11", x: 360, y: 300 },
-  { id: 'RC-2090', type: 'Bac endommagé', zone: 'Bd Zerktouni', prio: 'Basse', status: 'Reçue', assign: null, time: '12 min', date: "Aujourd'hui 09:04", x: 470, y: 250 },
-  { id: 'RC-2086', type: 'Dépôt sauvage', zone: 'Rue Ibnou Mounir', prio: 'Haute', status: 'En cours', assign: 'BN-07', time: '15 min', date: "Aujourd'hui 09:01", x: 660, y: 180 },
-  { id: 'RC-2083', type: 'Éclairage public', zone: "Bd d'Anfa", prio: 'Basse', status: 'En cours', assign: 'BN-14', time: '40 min', date: "Aujourd'hui 08:36", x: 220, y: 150 },
-  { id: 'RC-2080', type: 'Voirie (nid-de-poule)', zone: 'Rue Ahmed Charci', prio: 'Moyenne', status: 'En cours', assign: 'BN-02', time: '52 min', date: "Aujourd'hui 08:24", x: 410, y: 435 },
-  { id: 'RC-2078', type: 'Bac endommagé', zone: 'Bd Ghandi', prio: 'Basse', status: 'Résolue', assign: 'BN-09', time: '1 h 10', date: "Aujourd'hui 08:00", x: 250, y: 480 },
-  { id: 'RC-2075', type: 'Collecte manquée', zone: 'Rue Taha Hussein', prio: 'Moyenne', status: 'Résolue', assign: 'BN-04', time: '1 h 30', date: "Aujourd'hui 07:40", x: 560, y: 470 },
-  { id: 'RC-2071', type: 'Dépôt sauvage', zone: 'Rue Assilah', prio: 'Haute', status: 'Résolue', assign: 'BN-11', time: '2 h 20', date: "Aujourd'hui 06:50", x: 760, y: 520 },
+  { id: 'RC-2087', type: 'Dépôt sauvage', zone: 'Bd Anfa, Maârif', prio: 'Haute', status: 'En cours', assign: 'BN-04', time: '2 min', date: "Aujourd'hui 09:14", lng: -7.6120, lat: 33.5780 },
+  { id: 'RC-2084', type: 'Bac endommagé', zone: 'Rue Ahfir, Anfa', prio: 'Moyenne', status: 'En cours', assign: 'BN-02', time: '26 min', date: "Aujourd'hui 08:50", lng: -7.6390, lat: 33.5850 },
+  { id: 'RC-2081', type: 'Collecte manquée', zone: 'Rue de la Corniche, Aïn Diab', prio: 'Moyenne', status: 'Reçue', assign: null, time: '34 min', date: "Aujourd'hui 08:42", lng: -7.6620, lat: 33.5870 },
+  { id: 'RC-2088', type: 'Éclairage public', zone: 'Bd Rachidi, Sidi Belyout', prio: 'Basse', status: 'Reçue', assign: null, time: '8 min', date: "Aujourd'hui 09:08", lng: -7.6180, lat: 33.5930 },
+  { id: 'RC-2079', type: 'Dépôt sauvage', zone: 'Corniche Ouest', prio: 'Haute', status: 'Résolue', assign: 'BN-09', time: '18 min', date: "Aujourd'hui 07:20", lng: -7.6520, lat: 33.5860 },
+  { id: 'RC-2076', type: 'Voirie (nid-de-poule)', zone: 'Bd Oued Sebou, Hay Hassani', prio: 'Basse', status: 'En cours', assign: 'BN-11', time: '1 h', date: "Aujourd'hui 08:05", lng: -7.6650, lat: 33.5480 },
+  { id: 'RC-2072', type: 'Dépôt sauvage', zone: 'Rue Jenner, Maârif Sud', prio: 'Moyenne', status: 'Résolue', assign: 'BN-07', time: '2 h', date: "Aujourd'hui 07:02", lng: -7.6280, lat: 33.5830 },
+  { id: 'RC-2091', type: 'Collecte manquée', zone: 'Rue Normandie', prio: 'Moyenne', status: 'Reçue', assign: null, time: '5 min', date: "Aujourd'hui 09:11", lng: -7.6350, lat: 33.5800 },
+  { id: 'RC-2090', type: 'Bac endommagé', zone: 'Bd Zerktouni', prio: 'Basse', status: 'Reçue', assign: null, time: '12 min', date: "Aujourd'hui 09:04", lng: -7.6270, lat: 33.5880 },
+  { id: 'RC-2086', type: 'Dépôt sauvage', zone: 'Rue Ibnou Mounir', prio: 'Haute', status: 'En cours', assign: 'BN-07', time: '15 min', date: "Aujourd'hui 09:01", lng: -7.6200, lat: 33.5920 },
+  { id: 'RC-2083', type: 'Éclairage public', zone: "Bd d'Anfa", prio: 'Basse', status: 'En cours', assign: 'BN-14', time: '40 min', date: "Aujourd'hui 08:36", lng: -7.6480, lat: 33.5940 },
+  { id: 'RC-2080', type: 'Voirie (nid-de-poule)', zone: 'Rue Ahmed Charci', prio: 'Moyenne', status: 'En cours', assign: 'BN-02', time: '52 min', date: "Aujourd'hui 08:24", lng: -7.6420, lat: 33.5730 },
+  { id: 'RC-2078', type: 'Bac endommagé', zone: 'Bd Ghandi', prio: 'Basse', status: 'Résolue', assign: 'BN-09', time: '1 h 10', date: "Aujourd'hui 08:00", lng: -7.6580, lat: 33.5900 },
+  { id: 'RC-2075', type: 'Collecte manquée', zone: 'Rue Taha Hussein', prio: 'Moyenne', status: 'Résolue', assign: 'BN-04', time: '1 h 30', date: "Aujourd'hui 07:40", lng: -7.6150, lat: 33.5700 },
+  { id: 'RC-2071', type: 'Dépôt sauvage', zone: 'Rue Assilah', prio: 'Haute', status: 'Résolue', assign: 'BN-11', time: '2 h 20', date: "Aujourd'hui 06:50", lng: -7.6600, lat: 33.5520 },
 ];
 
 export const SLA_MAP = {

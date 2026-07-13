@@ -1,69 +1,97 @@
-import { useRef } from 'react';
-import MapBase from './MapBase.jsx';
+import { useEffect, useRef } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import useMapLibre from './useMapLibre.js';
 import useFleetAnimation from '../../hooks/useFleetAnimation.js';
 import { STATUS_COLOR } from '../../data/vehicles.js';
 import { useApp } from '../../context/AppContext.jsx';
 
+function truckEl(v) {
+  const el = document.createElement('div');
+  el.className = 'map-truck-marker';
+  el.innerHTML = `
+    ${v.status === 'active' ? '<span class="map-truck-halo"></span>' : ''}
+    <span class="map-truck-dot" style="background:${STATUS_COLOR[v.status]}"></span>
+    <span class="map-truck-label">${v.id}</span>
+  `;
+  return el;
+}
+
+function pinEl(c) {
+  const el = document.createElement('div');
+  el.className = 'map-pin-marker';
+  el.innerHTML = `
+    <span class="map-pin-halo"></span>
+    <span class="map-pin-dot${c.prio === 'Haute' ? ' pulse' : ''}"></span>
+  `;
+  return el;
+}
+
 export default function LiveMap() {
   const { vehicles, openComplaints, selectVehicle, setOpenComplaintId, followId } = useApp();
+  const { containerRef, mapRef, ready } = useMapLibre();
 
-  const nodesRef = useRef({});
-  const ringRef = useRef(null);
+  const markersRef = useRef({});
+  const ringMarkerRef = useRef(null);
+  const nodesRef = useRef({}); // { [id]: { setPos(lng,lat) } } — pont vers useFleetAnimation
 
-  useFleetAnimation(vehicles, nodesRef, ringRef, followId);
+  // Marqueurs véhicules
+  useEffect(() => {
+    if (!ready) return undefined;
+    const map = mapRef.current;
+    const markers = markersRef.current;
 
-  return (
-    <svg className="map-svg" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice">
-      <MapBase />
+    vehicles.forEach((v) => {
+      if (markers[v.id]) return;
+      const el = truckEl(v);
+      el.addEventListener('click', () => selectVehicle(v.id));
+      const marker = new maplibregl.Marker({ element: el }).setLngLat(v.route[0]).addTo(map);
+      markers[v.id] = marker;
+      nodesRef.current[v.id] = {
+        setPos: (lng, lat) => marker.setLngLat([lng, lat]),
+      };
+    });
 
-      {/* Réclamations ouvertes */}
-      <g id="pins">
-        {openComplaints.map((c) => (
-          <g key={c.id} cursor="pointer" onClick={() => setOpenComplaintId(c.id)}>
-            <circle cx={c.x} cy={c.y} r={16} fill="rgba(239,138,30,.18)" />
-            <circle cx={c.x} cy={c.y} r={9} fill="#EF8A1E" stroke="#fff" strokeWidth={2.5}>
-              {c.prio === 'Haute' && (
-                <animate attributeName="r" values="9;13;9" dur="1.8s" repeatCount="indefinite" />
-              )}
-            </circle>
-          </g>
-        ))}
-      </g>
+    Object.keys(markers).forEach((id) => {
+      if (!vehicles.some((v) => v.id === id)) {
+        markers[id].remove();
+        delete markers[id];
+        delete nodesRef.current[id];
+      }
+    });
 
-      {/* Véhicules */}
-      <g id="trucks">
-        {vehicles.map((v) => (
-          <g
-            key={v.id}
-            cursor="pointer"
-            ref={(node) => {
-              if (node) nodesRef.current[v.id] = node;
-              else delete nodesRef.current[v.id];
-            }}
-            onClick={() => selectVehicle(v.id)}
-          >
-            {v.status === 'active' && <circle cx={0} cy={0} r={16} fill="rgba(34,178,206,.14)" />}
-            <circle cx={0} cy={0} r={12} fill="#fff" />
-            <circle cx={0} cy={0} r={8.5} fill={STATUS_COLOR[v.status]} />
-            <text
-              x={0}
-              y={-18}
-              textAnchor="middle"
-              fontSize={11}
-              fontWeight={700}
-              fontFamily="IBM Plex Mono"
-              fill="#221238"
-            >
-              {v.id}
-            </text>
-          </g>
-        ))}
-      </g>
+    // Anneau de suivi en direct
+    if (!ringMarkerRef.current) {
+      const ringEl = document.createElement('div');
+      ringEl.className = 'map-follow-ring';
+      ringEl.style.opacity = '0';
+      ringMarkerRef.current = new maplibregl.Marker({ element: ringEl }).setLngLat(vehicles[0]?.route[0] ?? [0, 0]).addTo(map);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, vehicles]);
 
-      {/* Cercle de suivi en direct */}
-      <circle ref={ringRef} cx={0} cy={0} r={22} fill="none" stroke="#22B2CE" strokeWidth={3} opacity={0} pointerEvents="none">
-        <animate attributeName="r" values="20;27;20" dur="1.6s" repeatCount="indefinite" />
-      </circle>
-    </svg>
-  );
+  // Marqueurs réclamations ouvertes
+  useEffect(() => {
+    if (!ready) return undefined;
+    const map = mapRef.current;
+    const pins = openComplaints.map((c) => {
+      const el = pinEl(c);
+      el.addEventListener('click', () => setOpenComplaintId(c.id));
+      return new maplibregl.Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map);
+    });
+    return () => pins.forEach((p) => p.remove());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, openComplaints]);
+
+  // Anneau suivi : visible + positionné sur le véhicule suivi
+  useEffect(() => {
+    const ring = ringMarkerRef.current;
+    if (!ring) return;
+    const el = ring.getElement();
+    el.style.opacity = followId ? '0.9' : '0';
+  }, [followId]);
+
+  useFleetAnimation(vehicles, nodesRef, ringMarkerRef, followId);
+
+  return <div ref={containerRef} className="map-svg" />;
 }

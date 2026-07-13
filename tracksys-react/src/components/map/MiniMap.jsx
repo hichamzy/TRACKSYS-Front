@@ -1,14 +1,21 @@
-import MapBase from './MapBase.jsx';
+import { useEffect } from 'react';
+import maplibregl from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import useMapLibre from './useMapLibre.js';
 
 /** Mini-carte de localisation d'une réclamation (modale) */
-export default function MiniMap({ x, y }) {
-  return (
-    <svg className="map-svg" viewBox="0 0 1000 720" preserveAspectRatio="xMidYMid slice">
-      <MapBase />
-      <circle cx={x} cy={y} r={26} fill="rgba(239,138,30,.18)" />
-      <circle cx={x} cy={y} r={12} fill="#EF8A1E" stroke="#fff" strokeWidth={3}>
-        <animate attributeName="r" values="12;17;12" dur="1.8s" repeatCount="indefinite" />
-      </circle>
-    </svg>
-  );
+export default function MiniMap({ lng, lat }) {
+  const { containerRef, mapRef, ready } = useMapLibre({ center: [lng, lat], zoom: 14.5 });
+
+  useEffect(() => {
+    if (!ready) return undefined;
+    const el = document.createElement('div');
+    el.className = 'map-pin-marker';
+    el.innerHTML = '<span class="map-pin-halo"></span><span class="map-pin-dot pulse"></span>';
+    const marker = new maplibregl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapRef.current);
+    return () => marker.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, lng, lat]);
+
+  return <div ref={containerRef} className="map-svg" />;
 }

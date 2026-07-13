@@ -3,14 +3,15 @@ import { useEffect, useRef } from 'react';
 /**
  * Anime les véhicules le long de leur polyligne (comme la maquette : requestAnimationFrame,
  * interpolation segment par segment, vitesse proportionnelle à `speed`).
- * Les positions sont écrites directement dans le DOM SVG (attribut transform) : aucun re-render.
+ * Les positions sont poussées directement aux marqueurs MapLibre (hors du cycle de rendu React)
+ * via `nodesRef.current[id].setPos(lng, lat)`, pour tenir 60 fps sans re-render.
  *
- * @param {Array} vehicles     liste des véhicules
- * @param {object} nodesRef    ref -> { [id]: SVGGElement }
- * @param {object} ringRef     ref du cercle « suivi en direct »
+ * @param {Array} vehicles     liste des véhicules (route = [[lng,lat], ...])
+ * @param {object} nodesRef    ref -> { [id]: { setPos(lng, lat) } }
+ * @param {object} ringMarkerRef  ref du maplibregl.Marker de « suivi en direct »
  * @param {string|null} followId
  */
-export default function useFleetAnimation(vehicles, nodesRef, ringRef, followId) {
+export default function useFleetAnimation(vehicles, nodesRef, ringMarkerRef, followId) {
   const motion = useRef({}); // { [id]: { seg, t, pos } }
   const followRef = useRef(followId);
   followRef.current = followId;
@@ -47,20 +48,14 @@ export default function useFleetAnimation(vehicles, nodesRef, ringRef, followId)
           const b = v.route[(m.seg + 1) % v.route.length];
           m.pos = [a[0] + (b[0] - a[0]) * m.t, a[1] + (b[1] - a[1]) * m.t];
         }
-        if (node) node.setAttribute('transform', `translate(${m.pos[0]},${m.pos[1]})`);
+        if (node) node.setPos(m.pos[0], m.pos[1]);
       });
 
-      const ring = ringRef.current;
+      const ring = ringMarkerRef.current;
       if (ring) {
         const fid = followRef.current;
         const fm = fid ? motion.current[fid] : null;
-        if (fm) {
-          ring.setAttribute('opacity', '0.9');
-          ring.setAttribute('cx', fm.pos[0]);
-          ring.setAttribute('cy', fm.pos[1]);
-        } else {
-          ring.setAttribute('opacity', '0');
-        }
+        if (fm) ring.setLngLat(fm.pos);
       }
 
       raf = requestAnimationFrame(step);
@@ -68,5 +63,5 @@ export default function useFleetAnimation(vehicles, nodesRef, ringRef, followId)
 
     raf = requestAnimationFrame(step);
     return () => cancelAnimationFrame(raf);
-  }, [vehicles, nodesRef, ringRef]);
+  }, [vehicles, nodesRef, ringMarkerRef]);
 }
