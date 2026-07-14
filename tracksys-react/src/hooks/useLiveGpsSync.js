@@ -1,14 +1,21 @@
 import { useEffect, useRef } from 'react';
+import * as signalR from '@microsoft/signalr';
 import { positionsApi } from '../api/endpoints/positionsApi.js';
 
-const POLL_INTERVAL_MS = 4000;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const RECONNECT_POLL_INTERVAL_MS = 5000; // filet de secours pendant une coupure SignalR
 
 /**
- * Remplace useFleetAnimation : positionne les véhicules sur leurs fixs GPS réels
- * (GET /api/positions/live, public), corrélés via `flespiIdent`. Même contrat de sortie
- * que l'ancien hook — nodesRef.current[id].setPos(lng, lat) — donc LiveMap.jsx est inchangé.
- * Interpolation fluide (RAF) entre la dernière position connue et le nouveau fix reçu à
- * chaque poll ; véhicules sans position live restent sur lastKnownLat/Lng.
+ * Remplace useFleetAnimation : positionne les véhicules sur leurs fixs GPS réels,
+ * corrélés via `flespiIdent`. Même contrat de sortie que l'ancien hook —
+ * nodesRef.current[id].setPos(lng, lat) — donc LiveMap.jsx est inchangé.
+ *
+ * Temps réel via SignalR (hub public /hubs/positions, événement "PositionsUpdated"
+ * poussé par le backend juste après chaque ingestion Flespi réussie). Un fetch initial
+ * (GET /api/positions/live) peuple l'état au montage ; en cas de coupure de connexion
+ * SignalR, un polling de secours prend le relais tant que la reconnexion n'a pas repris.
+ * Interpolation fluide (RAF) entre la dernière position connue et le nouveau fix reçu ;
+ * véhicules sans position live restent sur lastKnownLat/Lng.
  *
  * @param {Array} vehicles
  * @param {object} nodesRef
@@ -22,7 +29,7 @@ export default function useLiveGpsSync(vehicles, nodesRef, ringMarkerRef, follow
   const vehiclesRef = useRef(vehicles);
   vehiclesRef.current = vehicles;
 
-  // Initialise chaque véhicule sur sa dernière position connue (fallback avant le premier poll)
+  // Initialise chaque véhicule sur sa dernière position connue (fallback avant le premier fix)
   useEffect(() => {
     vehicles.forEach((v) => {
       if (motion.current[v.id]) return;
@@ -31,38 +38,71 @@ export default function useLiveGpsSync(vehicles, nodesRef, ringMarkerRef, follow
     });
   }, [vehicles]);
 
-  // Poll GET /api/positions/live, corrèle par flespiIdent, fixe une nouvelle cible d'interpolation
+  const applyFix = (fix) => {
+    const v = vehiclesRef.current.find((veh) => veh.flespiIdent === fix.ident);
+    if (!v) return;
+    const m = motion.current[v.id];
+    if (!m) return;
+    const nextPos = [fix.longitude, fix.latitude];
+    if (nextPos[0] === m.to[0] && nextPos[1] === m.to[1]) return;
+    m.from = m.t < 1 ? currentInterpolated(m) : m.to;
+    m.to = nextPos;
+    m.t = 0;
+  };
+
+  // Connexion SignalR : reçoit les positions poussées par le backend en temps réel
   useEffect(() => {
     let cancelled = false;
+    let fallbackInterval = null;
 
-    const poll = async () => {
-      try {
-        const positions = await positionsApi.getLive();
-        if (cancelled) return;
-        const byIdent = new Map(positions.map((p) => [p.ident, p]));
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${BASE_URL}/hubs/positions`)
+      .withAutomaticReconnect()
+      .build();
 
-        vehiclesRef.current.forEach((v) => {
-          if (!v.flespiIdent) return;
-          const fix = byIdent.get(v.flespiIdent);
-          if (!fix) return;
-          const m = motion.current[v.id];
-          if (!m) return;
-          const nextPos = [fix.longitude, fix.latitude];
-          if (nextPos[0] === m.to[0] && nextPos[1] === m.to[1]) return;
-          m.from = m.t < 1 ? currentInterpolated(m) : m.to;
-          m.to = nextPos;
-          m.t = 0;
-        });
-      } catch {
-        /* poll suivant réessaiera — pas d'état d'erreur affiché sur la carte */
+    connection.on('PositionsUpdated', (positions) => {
+      positions.forEach(applyFix);
+    });
+
+    const startFallbackPolling = () => {
+      if (fallbackInterval) return;
+      fallbackInterval = setInterval(async () => {
+        try {
+          const positions = await positionsApi.getLive();
+          positions.forEach(applyFix);
+        } catch {
+          /* nouvelle tentative au prochain intervalle */
+        }
+      }, RECONNECT_POLL_INTERVAL_MS);
+    };
+
+    const stopFallbackPolling = () => {
+      if (fallbackInterval) {
+        clearInterval(fallbackInterval);
+        fallbackInterval = null;
       }
     };
 
-    poll();
-    const interval = setInterval(poll, POLL_INTERVAL_MS);
+    connection.onreconnecting(startFallbackPolling);
+    connection.onreconnected(stopFallbackPolling);
+    connection.onclose(startFallbackPolling);
+
+    // État initial : fetch REST classique, puis bascule sur le flux temps réel
+    positionsApi
+      .getLive()
+      .then((positions) => {
+        if (!cancelled) positions.forEach(applyFix);
+      })
+      .catch(() => {});
+
+    connection.start().catch(() => {
+      if (!cancelled) startFallbackPolling();
+    });
+
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      stopFallbackPolling();
+      connection.stop();
     };
   }, []);
 
