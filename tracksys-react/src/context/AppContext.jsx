@@ -1,7 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { INITIAL_VEHICLES } from '../data/vehicles.js';
-import { INITIAL_COMPLAINTS } from '../data/complaints.js';
-import { INITIAL_ALERTS, INITIAL_RULES, INITIAL_CHANNELS } from '../data/alerts.jsx';
+import { INITIAL_CHANNELS } from '../data/alerts.jsx';
+import { fleetApi } from '../api/endpoints/fleetApi.js';
+import { citizenApi } from '../api/endpoints/citizenApi.js';
+import { alertingApi } from '../api/endpoints/alertingApi.js';
+import { identityApi } from '../api/endpoints/identityApi.js';
+import { mapVehicleDto } from '../utils/mapVehicle.js';
+import { mapComplaintDto } from '../utils/mapComplaint.js';
+import { mapAlertDto, mapAlertRuleDto } from '../utils/mapAlert.js';
+import { useResource } from '../hooks/useResource.js';
+import { ApiError } from '../api/httpClient.js';
 
 const AppContext = createContext(null);
 
@@ -10,10 +17,51 @@ export function AppProvider({ children }) {
   const [view, setView] = useState('dash');
 
   /* ---------- référentiels ---------- */
-  const [vehicles, setVehicles] = useState(INITIAL_VEHICLES);
-  const [complaints] = useState(INITIAL_COMPLAINTS);
-  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
-  const [rules, setRules] = useState(INITIAL_RULES);
+  const fetchVehicles = useCallback(
+    () => fleetApi.getVehicles().then((list) => list.map(mapVehicleDto)),
+    []
+  );
+  const { data: vehicles, refetch: refetchVehicles } = useResource(fetchVehicles, {
+    initialData: [],
+  });
+
+  const { data: vehicleTypes } = useResource(useCallback(() => fleetApi.getVehicleTypes(), []), {
+    initialData: [],
+  });
+
+  const vehiclesByBackendId = useMemo(() => new Map(vehicles.map((v) => [v._backendId, v])), [vehicles]);
+
+  const fetchComplaints = useCallback(
+    () => citizenApi.getComplaints().then((list) => list.map((dto) => mapComplaintDto(dto, vehiclesByBackendId))),
+    [vehiclesByBackendId]
+  );
+  const { data: complaints, refetch: refetchComplaints } = useResource(fetchComplaints, { initialData: [] });
+
+  const fetchAlerts = useCallback(
+    () => alertingApi.getAlerts().then((list) => list.map((dto) => mapAlertDto(dto, vehiclesByBackendId))),
+    [vehiclesByBackendId]
+  );
+  const { data: alerts, refetch: refetchAlerts } = useResource(fetchAlerts, { initialData: [] });
+
+  const fetchRules = useCallback(
+    () => alertingApi.getAlertRules().then((list) => list.map(mapAlertRuleDto)),
+    []
+  );
+  const { data: rules, refetch: refetchRules } = useResource(fetchRules, { initialData: [] });
+
+  const { data: drivers, refetch: refetchDrivers } = useResource(useCallback(() => fleetApi.getDrivers(), []), {
+    initialData: [],
+  });
+
+  const { data: complaintCategories, refetch: refetchComplaintCategories } = useResource(
+    useCallback(() => citizenApi.getComplaintCategories(), []),
+    { initialData: [] }
+  );
+
+  const { data: users, refetch: refetchUsers } = useResource(useCallback(() => identityApi.getUsers(), []), {
+    initialData: [],
+  });
+
   const [channels, setChannels] = useState(INITIAL_CHANNELS);
 
   /* ---------- sélections ---------- */
@@ -36,29 +84,41 @@ export function AppProvider({ children }) {
 
   /* ---------- actions véhicules ---------- */
   const addVehicle = useCallback(
-    (form) => {
-      const id = form.id.trim() || `BN-${10 + vehicles.length}`;
+    async (form) => {
+      const code = form.id.trim() || `BN-${10 + vehicles.length}`;
       const plate = form.plate.trim() || '0000-A-6';
-      setVehicles((list) => [
-        ...list,
-        {
-          id,
-          plate,
-          type: form.type,
-          driver: form.driver,
-          status: 'idle',
-          speed: 0,
-          distToday: 0,
-          drive: '—',
-          lastStop: '0 min',
-          imei: form.imei.trim() || '—',
-          route: [[900, 600], [900, 600]],
-        },
-      ]);
-      showToast(`Véhicule ${id} ajouté au référentiel`);
-      return id;
+      const vehicleType = vehicleTypes.find((t) => t.label === form.type);
+      try {
+        await fleetApi.createVehicle({
+          code,
+          plateNumber: plate,
+          vehicleTypeId: vehicleType?.id,
+          zone: null,
+          imeiTracker: form.imei.trim() || null,
+          flespiIdent: null,
+        });
+        await refetchVehicles();
+        showToast(`Véhicule ${code} ajouté au référentiel`);
+        return code;
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la création du véhicule');
+        throw err;
+      }
     },
-    [vehicles.length, showToast]
+    [vehicles.length, vehicleTypes, refetchVehicles, showToast]
+  );
+
+  const changeVehicleStatus = useCallback(
+    async (backendId, status) => {
+      try {
+        await fleetApi.changeVehicleStatus(backendId, status);
+        await refetchVehicles();
+        showToast('Statut du véhicule mis à jour');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour du statut');
+      }
+    },
+    [refetchVehicles, showToast]
   );
 
   const selectVehicle = useCallback((id) => setSelectedVehId(id), []);
@@ -82,40 +142,66 @@ export function AppProvider({ children }) {
   }, []);
 
   /* ---------- actions alertes ---------- */
-  const markAllRead = useCallback(() => {
-    setAlerts((list) => list.map((a) => ({ ...a, unread: false })));
-    showToast('Toutes les alertes marquées comme lues');
-  }, [showToast]);
+  const markAlertRead = useCallback(
+    async (backendId) => {
+      try {
+        await alertingApi.markAlertRead(backendId);
+        await refetchAlerts();
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec du marquage de l’alerte');
+      }
+    },
+    [refetchAlerts, showToast]
+  );
+
+  const markAllRead = useCallback(async () => {
+    try {
+      await alertingApi.markAllAlertsRead();
+      await refetchAlerts();
+      showToast('Toutes les alertes marquées comme lues');
+    } catch (err) {
+      showToast(err instanceof ApiError ? err.message : 'Échec du marquage des alertes');
+    }
+  }, [refetchAlerts, showToast]);
 
   const unreadCount = useMemo(() => alerts.filter((a) => a.unread).length, [alerts]);
 
   /* ---------- actions règles ---------- */
   const setRuleValue = useCallback(
-    (index, val) => {
-      setRules((list) => list.map((r, i) => (i === index ? { ...r, val } : r)));
-      showToast('Seuil mis à jour');
+    async (index, val) => {
+      const rule = rules[index];
+      if (!rule) return;
+      try {
+        await alertingApi.updateAlertRuleThreshold(rule._backendId, Number(val));
+        await refetchRules();
+        showToast('Seuil mis à jour');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour du seuil');
+      }
     },
-    [showToast]
+    [rules, refetchRules, showToast]
   );
 
   const toggleRule = useCallback(
-    (index) => {
-      setRules((list) =>
-        list.map((r, i) => {
-          if (i !== index) return r;
-          showToast(!r.on ? 'Règle activée' : 'Règle désactivée');
-          return { ...r, on: !r.on };
-        })
-      );
+    async (index) => {
+      const rule = rules[index];
+      if (!rule) return;
+      try {
+        await alertingApi.toggleAlertRule(rule._backendId, !rule.on);
+        await refetchRules();
+        showToast(!rule.on ? 'Règle activée' : 'Règle désactivée');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour de la règle');
+      }
     },
-    [showToast]
+    [rules, refetchRules, showToast]
   );
 
+  // Canaux par règle : pas d'équivalent backend (AlertRuleDto n'expose pas de canaux par règle),
+  // reste piloté localement en attendant un éventuel besoin produit confirmé.
   const toggleRuleChannel = useCallback((index, channel) => {
-    setRules((list) =>
-      list.map((r, i) => (i === index ? { ...r, channels: { ...r.channels, [channel]: !r.channels[channel] } } : r))
-    );
-  }, []);
+    showToast('Canaux par règle non connectés au backend (maquette)');
+  }, [showToast]);
 
   const toggleChannel = useCallback((id) => {
     setChannels((list) => list.map((c) => (c.id === id ? { ...c, on: !c.on } : c)));
@@ -123,6 +209,124 @@ export function AppProvider({ children }) {
 
   /* ---------- réclamations ---------- */
   const openComplaints = useMemo(() => complaints.filter((c) => c.status !== 'Résolue'), [complaints]);
+
+  const assignComplaintVehicle = useCallback(
+    async (backendId, vehicleBackendId) => {
+      try {
+        await citizenApi.assignComplaint(backendId, vehicleBackendId);
+        await refetchComplaints();
+        showToast('Véhicule affecté à la réclamation');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de l’affectation');
+      }
+    },
+    [refetchComplaints, showToast]
+  );
+
+  const resolveComplaint = useCallback(
+    async (backendId, photoAfterUrl = null) => {
+      try {
+        await citizenApi.resolveComplaint(backendId, photoAfterUrl);
+        await refetchComplaints();
+        showToast('Réclamation résolue');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la clôture');
+      }
+    },
+    [refetchComplaints, showToast]
+  );
+
+  /* ---------- chauffeurs ---------- */
+  const addDriver = useCallback(
+    async (form) => {
+      try {
+        await fleetApi.createDriver({ fullName: form.fullName, phone: form.phone || null, licenceNumber: form.licenceNumber || null });
+        await refetchDrivers();
+        showToast(`Chauffeur ${form.fullName} ajouté au référentiel`);
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la création du chauffeur');
+      }
+    },
+    [refetchDrivers, showToast]
+  );
+
+  const changeDriverStatus = useCallback(
+    async (backendId, status) => {
+      try {
+        await fleetApi.changeDriverStatus(backendId, status);
+        await refetchDrivers();
+        showToast('Statut du chauffeur mis à jour');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour du statut');
+      }
+    },
+    [refetchDrivers, showToast]
+  );
+
+  /* ---------- catégories de réclamation ---------- */
+  const addComplaintCategory = useCallback(
+    async (form) => {
+      try {
+        await citizenApi.createComplaintCategory({
+          label: form.label,
+          icon: form.icon || null,
+          defaultPriority: form.defaultPriority,
+          slaHours: Number(form.slaHours),
+        });
+        await refetchComplaintCategories();
+        showToast(`Catégorie ${form.label} ajoutée`);
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la création de la catégorie');
+      }
+    },
+    [refetchComplaintCategories, showToast]
+  );
+
+  const toggleComplaintCategoryActive = useCallback(
+    async (backendId, isActive) => {
+      try {
+        await citizenApi.setComplaintCategoryActive(backendId, isActive);
+        await refetchComplaintCategories();
+        showToast(isActive ? 'Catégorie activée' : 'Catégorie désactivée');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour de la catégorie');
+      }
+    },
+    [refetchComplaintCategories, showToast]
+  );
+
+  /* ---------- utilisateurs ---------- */
+  const addUser = useCallback(
+    async (form) => {
+      try {
+        await identityApi.createUser({
+          email: form.email,
+          fullName: form.fullName,
+          password: form.password,
+          role: form.role,
+          scope: form.scope || null,
+        });
+        await refetchUsers();
+        showToast(`Utilisateur ${form.fullName} invité`);
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la création de l’utilisateur');
+      }
+    },
+    [refetchUsers, showToast]
+  );
+
+  const toggleUserActive = useCallback(
+    async (userId, isActive) => {
+      try {
+        await identityApi.setUserActive(userId, isActive);
+        await refetchUsers();
+        showToast(isActive ? 'Utilisateur activé' : 'Utilisateur désactivé');
+      } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Échec de la mise à jour de l’utilisateur');
+      }
+    },
+    [refetchUsers, showToast]
+  );
 
   /* ---------- Échap : ferme modale + panneau détail ---------- */
   useEffect(() => {
@@ -140,11 +344,25 @@ export function AppProvider({ children }) {
     view,
     setView,
     vehicles,
+    vehicleTypes,
     addVehicle,
+    changeVehicleStatus,
+    drivers,
+    addDriver,
+    changeDriverStatus,
     complaints,
     openComplaints,
+    assignComplaintVehicle,
+    resolveComplaint,
+    complaintCategories,
+    addComplaintCategory,
+    toggleComplaintCategoryActive,
+    users,
+    addUser,
+    toggleUserActive,
     alerts,
     unreadCount,
+    markAlertRead,
     markAllRead,
     rules,
     setRuleValue,

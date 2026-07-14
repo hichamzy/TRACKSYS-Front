@@ -2,9 +2,13 @@ import { useEffect, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import useMapLibre from './useMapLibre.js';
-import useFleetAnimation from '../../hooks/useFleetAnimation.js';
+import useLiveGpsSync from '../../hooks/useLiveGpsSync.js';
 import { STATUS_COLOR } from '../../data/vehicles.js';
 import { useApp } from '../../context/AppContext.jsx';
+
+function initialLngLat(v) {
+  return v.lastKnownLng != null && v.lastKnownLat != null ? [v.lastKnownLng, v.lastKnownLat] : v.route[0];
+}
 
 function truckEl(v) {
   const el = document.createElement('div');
@@ -45,7 +49,7 @@ export default function LiveMap() {
       if (markers[v.id]) return;
       const el = truckEl(v);
       el.addEventListener('click', () => selectVehicle(v.id));
-      const marker = new maplibregl.Marker({ element: el }).setLngLat(v.route[0]).addTo(map);
+      const marker = new maplibregl.Marker({ element: el }).setLngLat(initialLngLat(v)).addTo(map);
       markers[v.id] = marker;
       nodesRef.current[v.id] = {
         setPos: (lng, lat) => marker.setLngLat([lng, lat]),
@@ -65,7 +69,7 @@ export default function LiveMap() {
       const ringEl = document.createElement('div');
       ringEl.className = 'map-follow-ring';
       ringEl.style.opacity = '0';
-      ringMarkerRef.current = new maplibregl.Marker({ element: ringEl }).setLngLat(vehicles[0]?.route[0] ?? [0, 0]).addTo(map);
+      ringMarkerRef.current = new maplibregl.Marker({ element: ringEl }).setLngLat(vehicles[0] ? initialLngLat(vehicles[0]) : [0, 0]).addTo(map);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, vehicles]);
@@ -91,7 +95,7 @@ export default function LiveMap() {
     el.style.opacity = followId ? '0.9' : '0';
   }, [followId]);
 
-  useFleetAnimation(vehicles, nodesRef, ringMarkerRef, followId);
+  useLiveGpsSync(vehicles, nodesRef, ringMarkerRef, followId);
 
   return <div ref={containerRef} className="map-svg" />;
 }

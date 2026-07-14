@@ -1,6 +1,8 @@
 import Icon from '../icons/Icon.jsx';
-import { NAV_GROUPS, CURRENT_USER } from '../../data/navigation.js';
+import { NAV_GROUPS } from '../../data/navigation.js';
 import { useApp } from '../../context/AppContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { initialsFromName } from '../../utils/user.js';
 
 function BrandMark() {
   return (
@@ -20,6 +22,7 @@ function BrandMark() {
 
 export default function Sidebar() {
   const { view, setView, unreadCount, openComplaints } = useApp();
+  const { user, logout } = useAuth();
 
   const badgeValue = (key) => {
     if (key === 'alerts') return unreadCount || null;
@@ -70,11 +73,18 @@ export default function Sidebar() {
       </nav>
 
       <div className="sb-foot">
-        <div className="user">
-          <div className="avatar">{CURRENT_USER.initials}</div>
+        <div
+          className="user"
+          onClick={logout}
+          role="button"
+          tabIndex={0}
+          title="Se déconnecter"
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && logout()}
+        >
+          <div className="avatar">{initialsFromName(user?.fullName)}</div>
           <div>
-            <div className="user-name">{CURRENT_USER.name}</div>
-            <div className="user-role">{CURRENT_USER.role}</div>
+            <div className="user-name">{user?.fullName}</div>
+            <div className="user-role">{user?.roles?.join(', ')}</div>
           </div>
         </div>
       </div>

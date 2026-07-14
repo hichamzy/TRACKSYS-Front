@@ -69,7 +69,11 @@ export default function VehicleDetail() {
           </div>
           <div className="dt-row">
             <span className="k">Position GPS</span>
-            <span className="v">33.58°N 7.63°O</span>
+            <span className="v">
+              {v.lastKnownLat != null && v.lastKnownLng != null
+                ? `${v.lastKnownLat.toFixed(4)}°N ${Math.abs(v.lastKnownLng).toFixed(4)}°O`
+                : '—'}
+            </span>
           </div>
 
           <button

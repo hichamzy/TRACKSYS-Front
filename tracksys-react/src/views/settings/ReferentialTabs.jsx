@@ -1,31 +1,67 @@
+import { useState } from 'react';
 import Icon from '../../components/icons/Icon.jsx';
 import Panel from '../../components/ui/Panel.jsx';
 import RuleList from '../alerts/RuleList.jsx';
 import ChannelList from '../alerts/ChannelList.jsx';
-import { DRIVERS, COMPLAINT_CATEGORIES, USERS } from '../../data/referentials.js';
 import { useApp } from '../../context/AppContext.jsx';
 
-function RowAction({ label }) {
-  const { showToast } = useApp();
-  return (
-    <span className="row-act" role="button" tabIndex={0} onClick={() => showToast(label)}>
-      ⋯
-    </span>
-  );
-}
+const STATUS_CHIP = { 'En service': 'c-on', Repos: 'c-idle', Absent: 'c-off' };
 
 /* --- Chauffeurs --- */
+const DRIVER_EMPTY = { fullName: '', phone: '', licenceNumber: '' };
+
 export function DriversTab() {
-  const { showToast } = useApp();
+  const { drivers, addDriver, changeDriverStatus } = useApp();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(DRIVER_EMPTY);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = () => {
+    if (!form.fullName.trim()) return;
+    addDriver(form);
+    setForm(DRIVER_EMPTY);
+    setOpen(false);
+  };
+
   return (
     <div className="set-panel show">
       <div className="sec-head">
         <h2>Référentiel chauffeurs</h2>
-        <button className="b b-cyan sp" onClick={() => showToast('Formulaire chauffeur (maquette)')}>
+        <button className="b b-cyan sp" onClick={() => setOpen((o) => !o)}>
           <Icon name="plus" />
           Ajouter un chauffeur
         </button>
       </div>
+
+      {open && (
+        <div className="addform">
+          <h4>Nouveau chauffeur</h4>
+          <div className="form-grid">
+            <div className="field">
+              <label>Nom complet</label>
+              <input placeholder="ex. H. El Amrani" value={form.fullName} onChange={set('fullName')} />
+            </div>
+            <div className="field">
+              <label>Téléphone</label>
+              <input placeholder="06 00 00 00 00" value={form.phone} onChange={set('phone')} />
+            </div>
+            <div className="field">
+              <label>Permis</label>
+              <input placeholder="C-123456" value={form.licenceNumber} onChange={set('licenceNumber')} />
+            </div>
+          </div>
+          <div className="btn-row">
+            <button className="b b-cyan" onClick={save}>
+              <Icon name="check" />
+              Enregistrer
+            </button>
+            <button className="b" onClick={() => setOpen(false)}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <table className="tbl">
@@ -40,17 +76,24 @@ export function DriversTab() {
             </tr>
           </thead>
           <tbody>
-            {DRIVERS.map((d) => (
-              <tr key={d.name}>
-                <td>{d.name}</td>
-                <td className="mono">{d.phone}</td>
-                <td className="mono">{d.licence}</td>
-                <td className="mono">{d.vehicle}</td>
+            {drivers.map((d) => (
+              <tr key={d.id}>
+                <td>{d.fullName}</td>
+                <td className="mono">{d.phone || '—'}</td>
+                <td className="mono">{d.licenceNumber || '—'}</td>
+                <td className="mono">{d.currentVehicleCode || '—'}</td>
                 <td>
-                  <span className={`chip ${d.chip}`}>{d.status}</span>
+                  <span className={`chip ${STATUS_CHIP[d.status] || 'c-idle'}`}>{d.status}</span>
                 </td>
                 <td>
-                  <RowAction label={`Actions ${d.name} (maquette)`} />
+                  <span
+                    className="row-act"
+                    onClick={() => changeDriverStatus(d.id, d.status === 'En service' ? 'Repos' : 'En service')}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    ⋯
+                  </span>
                 </td>
               </tr>
             ))}
@@ -84,17 +127,68 @@ export function RulesTab() {
 }
 
 /* --- Catégories de réclamation --- */
+const CATEGORY_EMPTY = { label: '', icon: '', defaultPriority: 'Moyenne', slaHours: '24' };
+
 export function CategoriesTab() {
-  const { showToast } = useApp();
+  const { complaintCategories, addComplaintCategory, toggleComplaintCategoryActive } = useApp();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(CATEGORY_EMPTY);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = () => {
+    if (!form.label.trim()) return;
+    addComplaintCategory(form);
+    setForm(CATEGORY_EMPTY);
+    setOpen(false);
+  };
+
   return (
     <div className="set-panel show">
       <div className="sec-head">
         <h2>Catégories de réclamation</h2>
-        <button className="b b-cyan sp" onClick={() => showToast('Formulaire catégorie (maquette)')}>
+        <button className="b b-cyan sp" onClick={() => setOpen((o) => !o)}>
           <Icon name="plus" />
           Ajouter une catégorie
         </button>
       </div>
+
+      {open && (
+        <div className="addform">
+          <h4>Nouvelle catégorie</h4>
+          <div className="form-grid">
+            <div className="field">
+              <label>Libellé</label>
+              <input placeholder="ex. Dépôt sauvage" value={form.label} onChange={set('label')} />
+            </div>
+            <div className="field">
+              <label>Icône (emoji)</label>
+              <input placeholder="🗑️" value={form.icon} onChange={set('icon')} />
+            </div>
+            <div className="field">
+              <label>Priorité par défaut</label>
+              <select value={form.defaultPriority} onChange={set('defaultPriority')}>
+                <option>Haute</option>
+                <option>Moyenne</option>
+                <option>Basse</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>Délai cible (heures)</label>
+              <input type="number" value={form.slaHours} onChange={set('slaHours')} />
+            </div>
+          </div>
+          <div className="btn-row">
+            <button className="b b-cyan" onClick={save}>
+              <Icon name="check" />
+              Enregistrer
+            </button>
+            <button className="b" onClick={() => setOpen(false)}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <table className="tbl">
@@ -109,19 +203,26 @@ export function CategoriesTab() {
             </tr>
           </thead>
           <tbody>
-            {COMPLAINT_CATEGORIES.map((c) => (
-              <tr key={c.label}>
+            {complaintCategories.map((c) => (
+              <tr key={c.id}>
                 <td>{c.label}</td>
                 <td>{c.icon}</td>
                 <td>
-                  <span className={`prio p-${c.prio.toLowerCase()}`}>{c.prio}</span>
+                  <span className={`prio p-${c.defaultPriority.toLowerCase()}`}>{c.defaultPriority}</span>
                 </td>
-                <td className="mono">{c.sla}</td>
+                <td className="mono">{c.slaHours} h</td>
                 <td>
-                  <span className={`chip ${c.active ? 'c-on' : 'c-off'}`}>{c.active ? 'Actif' : 'Inactif'}</span>
+                  <span className={`chip ${c.isActive ? 'c-on' : 'c-off'}`}>{c.isActive ? 'Actif' : 'Inactif'}</span>
                 </td>
                 <td>
-                  <RowAction label={`Actions ${c.label} (maquette)`} />
+                  <span
+                    className="row-act"
+                    onClick={() => toggleComplaintCategoryActive(c.id, !c.isActive)}
+                    role="button"
+                    tabIndex={0}
+                  >
+                    ⋯
+                  </span>
                 </td>
               </tr>
             ))}
@@ -133,17 +234,73 @@ export function CategoriesTab() {
 }
 
 /* --- Utilisateurs & rôles --- */
+const USER_EMPTY = { email: '', fullName: '', password: '', role: 'Superviseur', scope: '' };
+const ROLES = ['Administrateur', 'Superviseur', 'Agent traitement', 'Exploitant flotte'];
+
 export function UsersTab() {
-  const { showToast } = useApp();
+  const { users, addUser, toggleUserActive } = useApp();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(USER_EMPTY);
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = () => {
+    if (!form.email.trim() || !form.fullName.trim() || !form.password.trim()) return;
+    addUser(form);
+    setForm(USER_EMPTY);
+    setOpen(false);
+  };
+
   return (
     <div className="set-panel show">
       <div className="sec-head">
         <h2>Utilisateurs &amp; rôles</h2>
-        <button className="b b-cyan sp" onClick={() => showToast('Formulaire utilisateur (maquette)')}>
+        <button className="b b-cyan sp" onClick={() => setOpen((o) => !o)}>
           <Icon name="plus" />
           Inviter un utilisateur
         </button>
       </div>
+
+      {open && (
+        <div className="addform">
+          <h4>Nouvel utilisateur</h4>
+          <div className="form-grid">
+            <div className="field">
+              <label>Nom complet</label>
+              <input value={form.fullName} onChange={set('fullName')} />
+            </div>
+            <div className="field">
+              <label>Email</label>
+              <input type="email" value={form.email} onChange={set('email')} />
+            </div>
+            <div className="field">
+              <label>Mot de passe initial</label>
+              <input type="password" value={form.password} onChange={set('password')} />
+            </div>
+            <div className="field">
+              <label>Rôle</label>
+              <select value={form.role} onChange={set('role')}>
+                {ROLES.map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Périmètre</label>
+              <input placeholder="ex. Anfa · Maârif" value={form.scope} onChange={set('scope')} />
+            </div>
+          </div>
+          <div className="btn-row">
+            <button className="b b-cyan" onClick={save}>
+              <Icon name="check" />
+              Enregistrer
+            </button>
+            <button className="b" onClick={() => setOpen(false)}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="panel">
         <table className="tbl">
@@ -158,17 +315,19 @@ export function UsersTab() {
             </tr>
           </thead>
           <tbody>
-            {USERS.map((u) => (
-              <tr key={u.email}>
-                <td>{u.name}</td>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>{u.fullName}</td>
                 <td className="mono">{u.email}</td>
-                <td>{u.role}</td>
-                <td>{u.scope}</td>
+                <td>{u.roles?.join(', ')}</td>
+                <td>{u.scope || '—'}</td>
                 <td>
-                  <span className={`chip ${u.active ? 'c-on' : 'c-off'}`}>{u.active ? 'Actif' : 'Inactif'}</span>
+                  <span className={`chip ${u.isActive ? 'c-on' : 'c-off'}`}>{u.isActive ? 'Actif' : 'Inactif'}</span>
                 </td>
                 <td>
-                  <RowAction label={`Actions ${u.name} (maquette)`} />
+                  <span className="row-act" onClick={() => toggleUserActive(u.id, !u.isActive)} role="button" tabIndex={0}>
+                    ⋯
+                  </span>
                 </td>
               </tr>
             ))}

@@ -31,13 +31,18 @@ function Timeline({ complaint }) {
 }
 
 export default function ComplaintModal() {
-  const { complaints, openComplaintId, setOpenComplaintId } = useApp();
+  const { complaints, openComplaintId, setOpenComplaintId, vehicles, assignComplaintVehicle, resolveComplaint } = useApp();
 
   const c = complaints.find((x) => x.id === openComplaintId);
   if (!c) return null;
 
   const resolved = c.status === 'Résolue';
   const close = () => setOpenComplaintId(null);
+
+  const handleAssign = (e) => {
+    const vehicle = vehicles.find((v) => v.id === e.target.value);
+    if (vehicle) assignComplaintVehicle(c._backendId, vehicle._backendId);
+  };
 
   return (
     <Modal open onClose={close}>
@@ -125,7 +130,18 @@ export default function ComplaintModal() {
           </div>
           <div className="rc-d">
             <span className="k">Véhicule affecté</span>
-            <span className="v">{c.assign || '—'}</span>
+            <span className="v">
+              {resolved ? (
+                c.assign || '—'
+              ) : (
+                <select value={c.assign || ''} onChange={handleAssign}>
+                  <option value="">— Non affecté —</option>
+                  {vehicles.map((v) => (
+                    <option key={v.id} value={v.id}>{v.id}</option>
+                  ))}
+                </select>
+              )}
+            </span>
           </div>
         </div>
 
@@ -136,6 +152,12 @@ export default function ComplaintModal() {
 
         <div className="mlabel">Suivi du statut</div>
         <Timeline complaint={c} />
+
+        {!resolved && (
+          <button className="btn btn-primary" style={{ marginTop: 16 }} onClick={() => resolveComplaint(c._backendId)}>
+            Marquer comme résolue
+          </button>
+        )}
       </div>
     </Modal>
   );

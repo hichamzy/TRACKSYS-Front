@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import useMapLibre from './useMapLibre.js';
-import { HIST_ROUTE, HIST_STOPS } from '../../data/history.js';
 import { measureRoute, pointAt } from '../../utils/geo.js';
 
 const ROUTE_SOURCE_ID = 'hist-route';
@@ -12,21 +11,22 @@ const ROUTE_LAYER_ID = 'hist-route-line';
  * Carte de l'historique : tracé du parcours, arrêts numérotés (D = départ, A = arrivée)
  * et marqueur du véhicule positionné selon la progression `progress` (0 → 1).
  */
-export default function HistoryMap({ progress = 0, vehicleId = 'BN-04' }) {
-  const { segLen, total } = useMemo(() => measureRoute(HIST_ROUTE), []);
-  const [mx, my] = pointAt(HIST_ROUTE, segLen, total, progress);
+export default function HistoryMap({ route, stops, progress = 0, vehicleId = '' }) {
+  const hasRoute = route.length > 0;
+  const { segLen, total } = useMemo(() => measureRoute(route), [route]);
+  const [mx, my] = hasRoute ? pointAt(route, segLen, total, progress) : [0, 0];
 
-  const { containerRef, mapRef, ready } = useMapLibre({ center: HIST_ROUTE[0], zoom: 13.5 });
+  const { containerRef, mapRef, ready } = useMapLibre({ center: hasRoute ? route[0] : [-7.6, 33.57], zoom: 13.5 });
   const vehicleMarkerRef = useRef(null);
 
   // Tracé + arrêts + fit bounds (une fois la carte prête)
   useEffect(() => {
-    if (!ready) return undefined;
+    if (!ready || !hasRoute) return undefined;
     const map = mapRef.current;
 
     map.addSource(ROUTE_SOURCE_ID, {
       type: 'geojson',
-      data: { type: 'Feature', geometry: { type: 'LineString', coordinates: HIST_ROUTE } },
+      data: { type: 'Feature', geometry: { type: 'LineString', coordinates: route } },
     });
     map.addLayer({
       id: ROUTE_LAYER_ID,
@@ -36,10 +36,10 @@ export default function HistoryMap({ progress = 0, vehicleId = 'BN-04' }) {
       paint: { 'line-color': '#22B2CE', 'line-width': 4 },
     });
 
-    const bounds = HIST_ROUTE.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(HIST_ROUTE[0], HIST_ROUTE[0]));
+    const bounds = route.reduce((b, p) => b.extend(p), new maplibregl.LngLatBounds(route[0], route[0]));
     map.fitBounds(bounds, { padding: 40, duration: 0 });
 
-    const stopMarkers = HIST_STOPS.map((s, i) => {
+    const stopMarkers = stops.map((s, i) => {
       const col = s.type ? '#2BB673' : '#1B3A6B';
       let mark = i;
       if (s.type === 'start') mark = 'D';
@@ -68,7 +68,7 @@ export default function HistoryMap({ progress = 0, vehicleId = 'BN-04' }) {
       if (map.getSource(ROUTE_SOURCE_ID)) map.removeSource(ROUTE_SOURCE_ID);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, vehicleId]);
+  }, [ready, hasRoute, route, stops, vehicleId]);
 
   // Position du véhicule le long du trajet
   useEffect(() => {

@@ -9,7 +9,9 @@ import AlertsView from './views/AlertsView.jsx';
 import ReportsView from './views/ReportsView.jsx';
 import ComplaintsView from './views/ComplaintsView.jsx';
 import SettingsView from './views/SettingsView.jsx';
-import { useApp } from './context/AppContext.jsx';
+import LoginView from './views/LoginView.jsx';
+import { AppProvider, useApp } from './context/AppContext.jsx';
+import { useAuth } from './context/AuthContext.jsx';
 
 // Une vue = un composant. La clé du menu latéral pilote l'affichage.
 const VIEWS = {
@@ -22,7 +24,7 @@ const VIEWS = {
   settings: SettingsView,
 };
 
-export default function App() {
+function AppShell() {
   const { view } = useApp();
   const CurrentView = VIEWS[view] ?? DashboardView;
 
@@ -43,5 +45,18 @@ export default function App() {
       <ComplaintModal />
       <Toast />
     </>
+  );
+}
+
+export default function App() {
+  const { isAuthenticated, isBootstrapping } = useAuth();
+
+  if (isBootstrapping) return null; // reprise de session silencieuse en cours
+  if (!isAuthenticated) return <LoginView />;
+
+  return (
+    <AppProvider>
+      <AppShell />
+    </AppProvider>
   );
 }

@@ -5,13 +5,18 @@ import Segmented from '../components/ui/Segmented.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { exportCSV } from '../utils/csv.js';
 import { avantImg } from '../utils/photos.js';
-import { CATEGORY_OPTIONS, STATUS_CHIP, STATUS_ORDER } from '../data/complaints.js';
+import { STATUS_CHIP, STATUS_ORDER } from '../data/complaints.js';
 
 export default function ComplaintsView() {
-  const { complaints, setOpenComplaintId, showToast } = useApp();
+  const { complaints, complaintCategories, setOpenComplaintId, showToast } = useApp();
 
   const [status, setStatus] = useState('all');
   const [cat, setCat] = useState('all');
+
+  const categoryOptions = [
+    { value: 'all', label: 'Toutes les catégories' },
+    ...complaintCategories.map((c) => ({ value: c.label, label: c.label })),
+  ];
 
   const byCat = useMemo(() => complaints.filter((c) => cat === 'all' || c.type === cat), [complaints, cat]);
 
@@ -30,6 +35,9 @@ export default function ComplaintsView() {
 
   const segOptions = [{ key: 'all', label: 'Toutes' }, ...STATUS_ORDER.map((s) => ({ key: s, label: s }))];
 
+  const resolvedCount = complaints.filter((c) => c.status === 'Résolue').length;
+  const pendingCount = complaints.filter((c) => c.status === 'Reçue').length;
+
   const exportComplaints = () => {
     const rows = [['ID', 'Type', 'Adresse', 'Priorité', 'Statut', 'Signalée le']];
     complaints.forEach((c) => rows.push([c.id, c.type, c.zone, c.prio, c.status, c.date]));
@@ -40,17 +48,15 @@ export default function ComplaintsView() {
   return (
     <section className="view show">
       <div className="kpi-row">
-        <KpiCard icon="clock" tone="ko" cit value="41" unit=" min" label="Temps moyen d'intervention" />
-        <KpiCard icon="clipboardCheck" tone="kg" value="156" label="Résolues ce mois-ci" />
-        <KpiCard icon="warning" tone="ko" cit value="6" label="En attente d'assignation" />
-        <KpiCard icon="users" tone="kc" value="4,6" unit="/5" label="Satisfaction citoyenne" />
+        <KpiCard icon="clipboardCheck" tone="kg" value={resolvedCount} label="Résolues" />
+        <KpiCard icon="warning" tone="ko" cit value={pendingCount} label="En attente d'assignation" />
       </div>
 
       <div className="rc-toolbar">
         <Segmented options={segOptions} counts={counts} active={status} onChange={setStatus} />
 
         <select className="rc-cat" value={cat} onChange={(e) => setCat(e.target.value)} aria-label="Filtrer par catégorie">
-          {CATEGORY_OPTIONS.map((o) => (
+          {categoryOptions.map((o) => (
             <option key={o.value} value={o.value}>
               {o.label}
             </option>

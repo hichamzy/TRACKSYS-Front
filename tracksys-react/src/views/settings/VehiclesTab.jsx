@@ -1,22 +1,21 @@
 import { useState } from 'react';
 import Icon from '../../components/icons/Icon.jsx';
-import { STATUS_MAP, VEHICLE_TYPES } from '../../data/vehicles.js';
-import { DRIVER_OPTIONS } from '../../data/referentials.js';
+import { STATUS_MAP } from '../../data/vehicles.js';
 import { useApp } from '../../context/AppContext.jsx';
 
-const EMPTY = { id: '', plate: '', type: VEHICLE_TYPES[0], driver: DRIVER_OPTIONS[0], imei: '' };
+const NEXT_STATUS = { active: 'idle', idle: 'off', off: 'active' };
 
 export default function VehiclesTab() {
-  const { vehicles, addVehicle, showToast } = useApp();
+  const { vehicles, vehicleTypes, addVehicle, changeVehicleStatus } = useApp();
 
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(EMPTY);
+  const [form, setForm] = useState({ id: '', plate: '', type: '', imei: '' });
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const save = () => {
-    addVehicle(form);
-    setForm(EMPTY);
+    addVehicle({ ...form, type: form.type || vehicleTypes[0]?.label });
+    setForm({ id: '', plate: '', type: '', imei: '' });
     setOpen(false);
   };
 
@@ -44,17 +43,9 @@ export default function VehiclesTab() {
             </div>
             <div className="field">
               <label>Type</label>
-              <select value={form.type} onChange={set('type')}>
-                {VEHICLE_TYPES.map((t) => (
-                  <option key={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Chauffeur affecté</label>
-              <select value={form.driver} onChange={set('driver')}>
-                {DRIVER_OPTIONS.map((d) => (
-                  <option key={d}>{d}</option>
+              <select value={form.type || vehicleTypes[0]?.label || ''} onChange={set('type')}>
+                {vehicleTypes.map((t) => (
+                  <option key={t.id}>{t.label}</option>
                 ))}
               </select>
             </div>
@@ -95,13 +86,18 @@ export default function VehiclesTab() {
                 <td className="mono" style={{ fontWeight: 600 }}>{v.id}</td>
                 <td className="mono">{v.plate}</td>
                 <td>{v.type}</td>
-                <td>{v.driver}</td>
+                <td>{v.driver || '—'}</td>
                 <td className="mono" style={{ fontSize: 11 }}>{v.imei}</td>
                 <td>
                   <span className={`chip ${STATUS_MAP[v.status].chip}`}>{STATUS_MAP[v.status].refLabel}</span>
                 </td>
                 <td>
-                  <span className="row-act" onClick={() => showToast(`Actions ${v.id} (maquette)`)} role="button" tabIndex={0}>
+                  <span
+                    className="row-act"
+                    onClick={() => changeVehicleStatus(v._backendId, NEXT_STATUS[v.status] ?? 'idle')}
+                    role="button"
+                    tabIndex={0}
+                  >
                     ⋯
                   </span>
                 </td>

@@ -32,9 +32,3 @@ export const NAV_GROUPS = [
     items: [{ view: 'settings', label: 'Paramètres & référentiels', icon: 'settings' }],
   },
 ];
-
-export const CURRENT_USER = {
-  initials: 'AT',
-  name: 'A. Tarhine',
-  role: 'Superviseur · Casablanca',
-};

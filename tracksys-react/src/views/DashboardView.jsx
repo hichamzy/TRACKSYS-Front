@@ -1,29 +1,37 @@
+import { useCallback } from 'react';
 import KpiCard from '../components/ui/KpiCard.jsx';
 import Panel from '../components/ui/Panel.jsx';
-import { LIVE_FEED, CATEGORY_BREAKDOWN } from '../data/complaints.js';
+import { LIVE_FEED } from '../data/complaints.js';
 import { useApp } from '../context/AppContext.jsx';
-
-const KPIS = [
-  { icon: 'truck', tone: 'kc', key: 'active', unit: ' / 16', label: 'Véhicules actifs', trend: { dir: 'up', text: '▲ 4%' } },
-  { icon: 'gauge', tone: 'kn', value: '486', unit: ' km', label: "Distance aujourd'hui", trend: { dir: 'up', text: '▲ 12%' } },
-  { icon: 'chat', tone: 'ko', cit: true, key: 'open', label: 'Réclamations ouvertes', trend: { dir: 'down', text: '▲ 6' } },
-  { icon: 'checkCircle', tone: 'kg', value: '87', unit: '%', label: 'Taux de résolution (7 j)', trend: { dir: 'up', text: '▲ 3%' } },
-];
+import { useResource } from '../hooks/useResource.js';
+import { citizenApi } from '../api/endpoints/citizenApi.js';
+import { reportsApi } from '../api/endpoints/reportsApi.js';
 
 export default function DashboardView() {
   const { vehicles, openComplaints } = useApp();
 
-  // Les KPI reliés aux données vivantes restent cohérents avec le reste de l'application
-  const dynamic = {
-    active: `${vehicles.filter((v) => v.status === 'active').length}`,
-    open: `${openComplaints.length}`,
-  };
+  const { data: breakdown } = useResource(useCallback(() => citizenApi.getComplaintCategoryBreakdown(), []), {
+    initialData: [],
+  });
+  const { data: kpis } = useResource(useCallback(() => reportsApi.getKpis(), []), { initialData: null });
+
+  const activeCount = vehicles.filter((v) => v.status === 'active').length;
+  const resolutionRate = kpis && kpis.totalComplaintsCount > 0
+    ? Math.round((100 * kpis.resolvedComplaintsCount) / kpis.totalComplaintsCount)
+    : 0;
+
+  const kpiCards = [
+    { icon: 'truck', tone: 'kc', value: `${activeCount}`, unit: ` / ${vehicles.length}`, label: 'Véhicules actifs' },
+    { icon: 'gauge', tone: 'kn', value: kpis ? kpis.fleetDistanceTodayKm.toLocaleString('fr-FR') : '—', unit: ' km', label: "Distance aujourd'hui" },
+    { icon: 'chat', tone: 'ko', cit: true, value: `${openComplaints.length}`, label: 'Réclamations ouvertes' },
+    { icon: 'checkCircle', tone: 'kg', value: `${resolutionRate}`, unit: '%', label: 'Taux de résolution' },
+  ];
 
   return (
     <section className="view show">
       <div className="kpi-row">
-        {KPIS.map((k) => (
-          <KpiCard key={k.label} {...k} value={k.key ? dynamic[k.key] : k.value} />
+        {kpiCards.map((k) => (
+          <KpiCard key={k.label} {...k} />
         ))}
       </div>
 
@@ -43,14 +51,14 @@ export default function DashboardView() {
           </div>
         </Panel>
 
-        <Panel title="Réclamations par catégorie" tag="7 derniers jours" bodyStyle={{ padding: '6px 0 10px' }}>
-          {CATEGORY_BREAKDOWN.map((z) => (
-            <div className="zone-row" key={z.label}>
-              <span className="zone-name">{z.label}</span>
+        <Panel title="Réclamations par catégorie" tag="toutes réclamations" bodyStyle={{ padding: '6px 0 10px' }}>
+          {breakdown.map((z) => (
+            <div className="zone-row" key={z.categoryId}>
+              <span className="zone-name">{z.categoryLabel}</span>
               <div className="bar">
-                <span style={{ width: `${z.pct}%` }} />
+                <span style={{ width: `${z.percentage}%` }} />
               </div>
-              <span className="zone-val">{z.value}</span>
+              <span className="zone-val">{z.count}</span>
             </div>
           ))}
         </Panel>

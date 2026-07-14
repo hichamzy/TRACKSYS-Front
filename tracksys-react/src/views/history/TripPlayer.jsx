@@ -1,18 +1,17 @@
 import Icon from '../../components/icons/Icon.jsx';
 import { fmtMin } from '../../utils/geo.js';
-import { START_MIN, DUR_MIN, END_MIN } from '../../data/history.js';
 
 const SPEEDS = [1, 2, 4];
 
 /** Barre de lecture du trajet : lecture/pause, curseur de progression, vitesse de relecture */
-export default function TripPlayer({ progress, playing, speed, onToggle, onScrub, onSpeed }) {
+export default function TripPlayer({ progress, playing, speed, startMin, durMin, endMin, onToggle, onScrub, onSpeed }) {
   return (
     <div className="player">
       <button className="play-btn" onClick={onToggle} aria-label={playing ? 'Pause' : 'Lecture'}>
         <Icon name={playing ? 'pause' : 'play'} size={20} filled />
       </button>
 
-      <span className="play-time">{fmtMin(START_MIN + progress * DUR_MIN)}</span>
+      <span className="play-time">{fmtMin(startMin + progress * durMin)}</span>
 
       <input
         type="range"
@@ -25,7 +24,7 @@ export default function TripPlayer({ progress, playing, speed, onToggle, onScrub
       />
 
       <span className="play-time" style={{ color: 'var(--muted)' }}>
-        {fmtMin(END_MIN)}
+        {fmtMin(endMin)}
       </span>
 
       <div className="speed">

@@ -9,7 +9,7 @@ import RuleList from './alerts/RuleList.jsx';
 import ChannelList from './alerts/ChannelList.jsx';
 import { useApp } from '../context/AppContext.jsx';
 import { exportCSV, plainDetail } from '../utils/csv.js';
-import { ALERT_TYPES, SEV_LABEL, SEV_FILTERS, ALERT_VEHICLE_OPTIONS } from '../data/alerts.jsx';
+import { ALERT_TYPES, SEV_LABEL, SEV_FILTERS } from '../data/alerts.jsx';
 import { NOTIF_RECIPIENTS, NOTIF_FREQUENCIES } from '../data/referentials.js';
 
 const TABS = [
@@ -18,7 +18,7 @@ const TABS = [
 ];
 
 export default function AlertsView() {
-  const { alerts, rules, unreadCount, markAllRead, showToast } = useApp();
+  const { alerts, rules, vehicles, unreadCount, markAllRead, showToast } = useApp();
 
   const [tab, setTab] = useState('feed');
   const [sev, setSev] = useState('all');
@@ -42,6 +42,9 @@ export default function AlertsView() {
   );
 
   const activeRules = rules.filter((r) => r.on).length;
+  const vehicleOptions = ['all', ...vehicles.map((v) => v.id)];
+  const speedCount = alerts.filter((a) => a.k === 'speed').length;
+  const stopCount = alerts.filter((a) => a.k === 'stop').length;
 
   const exportAlerts = () => {
     const rows = [['ID', 'Type', 'Gravité', 'Véhicule', 'Détail', 'Quand']];
@@ -57,8 +60,8 @@ export default function AlertsView() {
     <section className="view show">
       <div className="kpi-row">
         <KpiCard icon="warning" tone="ko" value={unreadCount} label="Alertes non lues" />
-        <KpiCard icon="zap" tone="kc" value="12" label="Excès de vitesse (7 j)" />
-        <KpiCard icon="clock" tone="kn" value="9" label="Arrêts prolongés (7 j)" />
+        <KpiCard icon="zap" tone="kc" value={speedCount} label="Excès de vitesse" />
+        <KpiCard icon="clock" tone="kn" value={stopCount} label="Arrêts prolongés" />
         <KpiCard icon="checkCircle" tone="kg" value={activeRules} label="Règles actives" />
       </div>
 
@@ -70,7 +73,7 @@ export default function AlertsView() {
             <Segmented options={SEV_FILTERS} counts={counts} active={sev} onChange={setSev} />
 
             <select className="rc-cat" value={veh} onChange={(e) => setVeh(e.target.value)} aria-label="Filtrer par véhicule">
-              {ALERT_VEHICLE_OPTIONS.map((v) => (
+              {vehicleOptions.map((v) => (
                 <option key={v} value={v}>
                   {v === 'all' ? 'Tous les véhicules' : v}
                 </option>

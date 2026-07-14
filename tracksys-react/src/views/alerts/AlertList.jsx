@@ -3,13 +3,13 @@ import { useApp } from '../../context/AppContext.jsx';
 
 /** Une ligne d'alerte du flux */
 function AlertRow({ alert }) {
-  const { showToast } = useApp();
+  const { markAlertRead } = useApp();
   const t = ALERT_TYPES[alert.k];
 
   return (
     <div
       className={`al-row${alert.unread ? ' unread' : ''}`}
-      onClick={() => showToast(`${alert.id} — ${t.label} (${alert.veh})`)}
+      onClick={() => alert.unread && markAlertRead(alert._backendId)}
       role="button"
       tabIndex={0}
     >
