@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { identityApi } from '../api/endpoints/identityApi.js';
+import { tenancyApi } from '../api/endpoints/tenancyApi.js';
 import { setAccessToken, configureAuthHooks, ApiError } from '../api/httpClient.js';
 
 const AuthContext = createContext(null);
 
 const REFRESH_TOKEN_KEY = 'tracksys.refreshToken';
+const MODULES_POLL_INTERVAL_MS = 30_000;
 
 function userFromAuthResponse(res) {
   return {
@@ -86,6 +88,27 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     configureAuthHooks({ onFailure: clearSession, refresh: silentRefresh });
   }, [clearSession, silentRefresh]);
+
+  // Repolle les modules activés de la ville : le claim JWT n'est réémis qu'au prochain
+  // login/refresh (jusqu'à 15 min), donc un changement fait par le SuperAdmin resterait
+  // invisible côté sidebar sans ce polling. La garde backend (RequireModuleAttribute)
+  // reste elle basée sur le claim JWT — ce polling ne fait qu'accélérer l'affichage,
+  // pas la sécurité côté API.
+  useEffect(() => {
+    if (!user?.cityId || user.isSuperAdmin) return;
+
+    const cityId = user.cityId;
+    const interval = setInterval(async () => {
+      try {
+        const res = await tenancyApi.getCityModules(cityId);
+        setUser((prev) => (prev && prev.cityId === cityId ? { ...prev, enabledModules: new Set(res.moduleCodes) } : prev));
+      } catch {
+        /* échec réseau ponctuel : on garde les modules connus jusqu'au prochain tick */
+      }
+    }, MODULES_POLL_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [user?.cityId, user?.isSuperAdmin]);
 
   const value = useMemo(
     () => ({
