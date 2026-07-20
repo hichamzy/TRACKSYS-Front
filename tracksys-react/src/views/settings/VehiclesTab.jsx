@@ -13,10 +13,14 @@ export default function VehiclesTab() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const save = () => {
-    addVehicle({ ...form, type: form.type || vehicleTypes[0]?.label });
-    setForm({ id: '', plate: '', type: '', imei: '' });
-    setOpen(false);
+  const save = async () => {
+    try {
+      await addVehicle({ ...form, type: form.type || vehicleTypes[0]?.label });
+      setForm({ id: '', plate: '', type: '', imei: '' });
+      setOpen(false);
+    } catch {
+      /* échec déjà signalé par le toast de addVehicle, formulaire laissé ouvert pour correction */
+    }
   };
 
   return (

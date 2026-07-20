@@ -19,11 +19,15 @@ export function DriversTab() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const save = () => {
+  const save = async () => {
     if (!form.fullName.trim()) return;
-    addDriver(form);
-    setForm(DRIVER_EMPTY);
-    setOpen(false);
+    try {
+      await addDriver(form);
+      setForm(DRIVER_EMPTY);
+      setOpen(false);
+    } catch {
+      /* échec déjà signalé par le toast de addDriver, formulaire laissé ouvert pour correction */
+    }
   };
 
   return (
@@ -138,11 +142,15 @@ export function CategoriesTab() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const save = () => {
+  const save = async () => {
     if (!form.label.trim()) return;
-    addComplaintCategory(form);
-    setForm(CATEGORY_EMPTY);
-    setOpen(false);
+    try {
+      await addComplaintCategory(form);
+      setForm(CATEGORY_EMPTY);
+      setOpen(false);
+    } catch {
+      /* échec déjà signalé par le toast de addComplaintCategory, formulaire laissé ouvert */
+    }
   };
 
   return (
@@ -253,9 +261,10 @@ export function UsersTab() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const save = () => {
+  const save = async () => {
     if (!form.email.trim() || !form.fullName.trim() || !form.password.trim()) return;
-    addUser(form);
+    const created = await addUser(form);
+    if (!created) return;
     setForm(USER_EMPTY);
     setOpen(false);
   };

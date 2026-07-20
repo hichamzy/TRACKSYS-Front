@@ -245,6 +245,7 @@ export function AppProvider({ children }) {
         showToast(`Chauffeur ${form.fullName} ajouté au référentiel`);
       } catch (err) {
         showToast(err instanceof ApiError ? err.message : 'Échec de la création du chauffeur');
+        throw err;
       }
     },
     [refetchDrivers, showToast]
@@ -277,6 +278,7 @@ export function AppProvider({ children }) {
         showToast(`Catégorie ${form.label} ajoutée`);
       } catch (err) {
         showToast(err instanceof ApiError ? err.message : 'Échec de la création de la catégorie');
+        throw err;
       }
     },
     [refetchComplaintCategories, showToast]
@@ -309,8 +311,10 @@ export function AppProvider({ children }) {
         });
         await refetchUsers();
         showToast(`Utilisateur ${form.fullName} invité`);
+        return true;
       } catch (err) {
         showToast(err instanceof ApiError ? err.message : 'Échec de la création de l’utilisateur');
+        return false;
       }
     },
     [refetchUsers, showToast]
