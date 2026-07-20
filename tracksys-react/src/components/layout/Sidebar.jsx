@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import Icon from '../icons/Icon.jsx';
 import { NAV_GROUPS } from '../../data/navigation.js';
 import { useApp } from '../../context/AppContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { initialsFromName } from '../../utils/user.js';
+import { tenancyApi } from '../../api/endpoints/tenancyApi.js';
 
 function BrandMark() {
   return (
@@ -23,6 +25,22 @@ function BrandMark() {
 export default function Sidebar() {
   const { view, setView, unreadCount, openComplaints } = useApp();
   const { user, logout } = useAuth();
+  const [cityName, setCityName] = useState(null);
+
+  useEffect(() => {
+    if (!user?.cityId) {
+      setCityName(null);
+      return;
+    }
+    tenancyApi
+      .getCity(user.cityId)
+      .then((c) => setCityName(c.name))
+      .catch(() => setCityName(null));
+  }, [user?.cityId]);
+
+  let scopeSuffix = '';
+  if (cityName) scopeSuffix = ` · ${cityName}`;
+  else if (user?.isSuperAdmin) scopeSuffix = ' · Toutes villes';
 
   const badgeValue = (key) => {
     if (key === 'alerts') return unreadCount || null;
@@ -84,7 +102,10 @@ export default function Sidebar() {
           <div className="avatar">{initialsFromName(user?.fullName)}</div>
           <div>
             <div className="user-name">{user?.fullName}</div>
-            <div className="user-role">{user?.roles?.join(', ')}</div>
+            <div className="user-role">
+              {user?.roles?.join(', ')}
+              {scopeSuffix}
+            </div>
           </div>
         </div>
       </div>

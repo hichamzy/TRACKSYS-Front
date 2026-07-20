@@ -305,6 +305,7 @@ export function AppProvider({ children }) {
           password: form.password,
           role: form.role,
           scope: form.scope || null,
+          cityId: form.cityId || null,
         });
         await refetchUsers();
         showToast(`Utilisateur ${form.fullName} invité`);

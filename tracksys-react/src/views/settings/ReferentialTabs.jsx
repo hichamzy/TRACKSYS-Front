@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../../components/icons/Icon.jsx';
 import Panel from '../../components/ui/Panel.jsx';
 import RuleList from '../alerts/RuleList.jsx';
 import ChannelList from '../alerts/ChannelList.jsx';
 import { useApp } from '../../context/AppContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { tenancyApi } from '../../api/endpoints/tenancyApi.js';
 
 const STATUS_CHIP = { 'En service': 'c-on', Repos: 'c-idle', Absent: 'c-off' };
 
@@ -234,13 +236,20 @@ export function CategoriesTab() {
 }
 
 /* --- Utilisateurs & rôles --- */
-const USER_EMPTY = { email: '', fullName: '', password: '', role: 'Superviseur', scope: '' };
+const USER_EMPTY = { email: '', fullName: '', password: '', role: 'Superviseur', scope: '', cityId: '' };
 const ROLES = ['Administrateur', 'Superviseur', 'Agent traitement', 'Exploitant flotte'];
 
 export function UsersTab() {
   const { users, addUser, toggleUserActive } = useApp();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(USER_EMPTY);
+  const [cities, setCities] = useState([]);
+
+  useEffect(() => {
+    if (!user?.isSuperAdmin) return;
+    tenancyApi.getCities().then(setCities).catch(() => setCities([]));
+  }, [user?.isSuperAdmin]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -289,6 +298,19 @@ export function UsersTab() {
               <label>Périmètre</label>
               <input placeholder="ex. Anfa · Maârif" value={form.scope} onChange={set('scope')} />
             </div>
+            {user?.isSuperAdmin && (
+              <div className="field">
+                <label>Ville</label>
+                <select value={form.cityId} onChange={set('cityId')}>
+                  <option value="">Aucune (SuperAdmin)</option>
+                  {cities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="btn-row">
             <button className="b b-cyan" onClick={save}>

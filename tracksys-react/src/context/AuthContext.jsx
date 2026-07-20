@@ -7,7 +7,14 @@ const AuthContext = createContext(null);
 const REFRESH_TOKEN_KEY = 'tracksys.refreshToken';
 
 function userFromAuthResponse(res) {
-  return { userId: res.userId, email: res.email, fullName: res.fullName, roles: res.roles };
+  return {
+    userId: res.userId,
+    email: res.email,
+    fullName: res.fullName,
+    roles: res.roles,
+    cityId: res.cityId ?? null,
+    isSuperAdmin: res.roles.includes('SuperAdmin'),
+  };
 }
 
 export function AuthProvider({ children }) {
