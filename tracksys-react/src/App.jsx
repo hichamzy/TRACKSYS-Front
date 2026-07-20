@@ -12,6 +12,7 @@ import SettingsView from './views/SettingsView.jsx';
 import LoginView from './views/LoginView.jsx';
 import { AppProvider, useApp } from './context/AppContext.jsx';
 import { useAuth } from './context/AuthContext.jsx';
+import { NAV_GROUPS, filterNavGroupsByModules } from './data/navigation.js';
 
 // Une vue = un composant. La clé du menu latéral pilote l'affichage.
 const VIEWS = {
@@ -26,7 +27,16 @@ const VIEWS = {
 
 function AppShell() {
   const { view } = useApp();
-  const CurrentView = VIEWS[view] ?? DashboardView;
+  const { user } = useAuth();
+
+  // La vue courante (ex. state persistant, ou 'dash' par défaut) peut correspondre à un
+  // module désactivé pour la ville de l'utilisateur — retombe sur la première vue
+  // réellement disponible plutôt qu'un fallback fixe sur 'dash' (lui-même désactivable).
+  const availableGroups = filterNavGroupsByModules(NAV_GROUPS, user?.enabledModules ?? new Set(), user?.isSuperAdmin ?? false);
+  const availableViews = new Set(availableGroups.flatMap((g) => g.items.map((i) => i.view)));
+  const firstAvailableView = availableGroups[0]?.items[0]?.view ?? 'dash';
+  const resolvedView = user?.isSuperAdmin || availableViews.has(view) ? view : firstAvailableView;
+  const CurrentView = VIEWS[resolvedView] ?? DashboardView;
 
   return (
     <>

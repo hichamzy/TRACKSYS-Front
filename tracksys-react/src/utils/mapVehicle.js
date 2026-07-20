@@ -17,6 +17,7 @@ export function mapVehicleDto(dto) {
     flespiIdent: dto.flespiIdent,
     lastKnownLat: dto.lastKnownLat,
     lastKnownLng: dto.lastKnownLng,
+    cityId: dto.cityId,
     // Fallback si aucune position GPS connue (jamais reçu de fix) — centre Casablanca.
     route: [[-7.6, 33.57], [-7.6, 33.57]],
   };

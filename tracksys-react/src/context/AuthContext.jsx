@@ -14,6 +14,10 @@ function userFromAuthResponse(res) {
     roles: res.roles,
     cityId: res.cityId ?? null,
     isSuperAdmin: res.roles.includes('SuperAdmin'),
+    // SuperAdmin : le backend n'émet aucun claim "module" (accès total implicite) —
+    // enabledModules reste vide pour lui, isSuperAdmin doit toujours être vérifié
+    // en priorité par les consommateurs (ex. filterNavGroupsByModules).
+    enabledModules: new Set(res.enabledModules ?? []),
   };
 }
 

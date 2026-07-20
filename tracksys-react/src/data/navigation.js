@@ -32,3 +32,17 @@ export const NAV_GROUPS = [
     items: [{ view: 'settings', label: 'Paramètres & référentiels', icon: 'settings' }],
   },
 ];
+
+// Filtre les groupes/items du menu selon les modules activés pour la ville de
+// l'utilisateur (item.view sert directement de code de module — les deux vocabulaires
+// sont volontairement identiques). SuperAdmin : aucun filtre, accès total toujours visible.
+export function filterNavGroupsByModules(groups, enabledModules, isSuperAdmin) {
+  if (isSuperAdmin) return groups;
+
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => enabledModules.has(item.view)),
+    }))
+    .filter((group) => group.items.length > 0);
+}

@@ -1,15 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '../../components/icons/Icon.jsx';
 import { STATUS_MAP } from '../../data/vehicles.js';
 import { useApp } from '../../context/AppContext.jsx';
+import { useAuth } from '../../context/AuthContext.jsx';
+import { tenancyApi } from '../../api/endpoints/tenancyApi.js';
 
 const NEXT_STATUS = { active: 'idle', idle: 'off', off: 'active' };
 
 export default function VehiclesTab() {
   const { vehicles, vehicleTypes, addVehicle, changeVehicleStatus } = useApp();
+  const { user } = useAuth();
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ id: '', plate: '', type: '', imei: '' });
+  const [cityNames, setCityNames] = useState({});
+
+  useEffect(() => {
+    if (!user?.isSuperAdmin) return;
+    tenancyApi
+      .getCities()
+      .then((cities) => setCityNames(Object.fromEntries(cities.map((c) => [c.id, c.name]))))
+      .catch(() => setCityNames({}));
+  }, [user?.isSuperAdmin]);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -81,6 +93,7 @@ export default function VehiclesTab() {
               <th>Chauffeur</th>
               <th>Balise GPS</th>
               <th>Statut</th>
+              {user?.isSuperAdmin && <th>Ville</th>}
               <th />
             </tr>
           </thead>
@@ -95,6 +108,7 @@ export default function VehiclesTab() {
                 <td>
                   <span className={`chip ${STATUS_MAP[v.status].chip}`}>{STATUS_MAP[v.status].refLabel}</span>
                 </td>
+                {user?.isSuperAdmin && <td>{cityNames[v.cityId] || '—'}</td>}
                 <td>
                   <span
                     className="row-act"

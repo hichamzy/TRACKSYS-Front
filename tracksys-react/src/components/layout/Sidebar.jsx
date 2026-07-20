@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Icon from '../icons/Icon.jsx';
-import { NAV_GROUPS } from '../../data/navigation.js';
+import { NAV_GROUPS, filterNavGroupsByModules } from '../../data/navigation.js';
 import { useApp } from '../../context/AppContext.jsx';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { initialsFromName } from '../../utils/user.js';
@@ -42,6 +42,11 @@ export default function Sidebar() {
   if (cityName) scopeSuffix = ` · ${cityName}`;
   else if (user?.isSuperAdmin) scopeSuffix = ' · Toutes villes';
 
+  const navGroups = useMemo(
+    () => filterNavGroupsByModules(NAV_GROUPS, user?.enabledModules ?? new Set(), user?.isSuperAdmin ?? false),
+    [user?.enabledModules, user?.isSuperAdmin]
+  );
+
   const badgeValue = (key) => {
     if (key === 'alerts') return unreadCount || null;
     if (key === 'complaints') return openComplaints.length || null;
@@ -64,7 +69,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="nav">
-        {NAV_GROUPS.map((group) => (
+        {navGroups.map((group) => (
           <div key={group.label}>
             <div className="nav-group">{group.label}</div>
             {group.items.map((item) => {

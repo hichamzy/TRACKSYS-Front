@@ -5,4 +5,6 @@ export const tenancyApi = {
   getCity: (id) => httpClient.get(`/api/tenancy/cities/${id}`),
   createCity: (body) => httpClient.post('/api/tenancy/cities', body),
   updateCity: (id, body) => httpClient.put(`/api/tenancy/cities/${id}`, body),
+  getCityModules: (id) => httpClient.get(`/api/tenancy/cities/${id}/modules`),
+  updateCityModules: (id, moduleCodes) => httpClient.put(`/api/tenancy/cities/${id}/modules`, { moduleCodes }),
 };

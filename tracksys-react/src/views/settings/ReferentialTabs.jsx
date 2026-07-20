@@ -341,6 +341,7 @@ export function UsersTab() {
               <th>Email</th>
               <th>Rôle</th>
               <th>Périmètre</th>
+              {user?.isSuperAdmin && <th>Ville</th>}
               <th>Statut</th>
               <th />
             </tr>
@@ -352,6 +353,9 @@ export function UsersTab() {
                 <td className="mono">{u.email}</td>
                 <td>{u.roles?.join(', ')}</td>
                 <td>{u.scope || '—'}</td>
+                {user?.isSuperAdmin && (
+                  <td>{u.cityId ? cities.find((c) => c.id === u.cityId)?.name || '—' : 'Toutes villes'}</td>
+                )}
                 <td>
                   <span className={`chip ${u.isActive ? 'c-on' : 'c-off'}`}>{u.isActive ? 'Actif' : 'Inactif'}</span>
                 </td>
